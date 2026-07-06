@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
+	tgmd "github.com/Mad-Pixels/goldmark-tgmd"
 	"github.com/appleboy/drone-template-lib/template"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -281,6 +284,36 @@ func TestEscapeMarkdownOne(t *testing.T) {
 	for _, testCase := range provider {
 		assert.Equal(t, testCase[1], escapeMarkdownOne(testCase[0]))
 	}
+}
+
+func TestConvertMarkdownV2One(t *testing.T) {
+	provider := [][]string{
+		{"user", "user"},
+		{"user_name", `user\_name`},
+		{"user_name_long", `user\_name\_long`},
+		{"**bold** text", `***bold*** text`},
+		{"*italic* text", `_italic_ text`},
+		{"`code` block", "`code` block"},
+		{"[link](url)", "[link](url)"},
+	}
+
+	md := tgmd.TGMD()
+	var buf bytes.Buffer
+	for _, testCase := range provider {
+		buf.Reset()
+		if err := md.Convert([]byte(testCase[0]), &buf); err != nil {
+			t.Fatalf("failed to convert markdown: %v", err)
+		}
+		assert.Equal(t, testCase[1], strings.TrimSpace(buf.String()))
+	}
+}
+
+func TestConvertMarkdownV2Fields(t *testing.T) {
+	userName := "user_name"
+	repoName := "repo_name"
+	convertMarkdownV2Fields(&userName, &repoName)
+	assert.Equal(t, `user\_name`, userName)
+	assert.Equal(t, `repo\_name`, repoName)
 }
 
 func TestParseTo(t *testing.T) {

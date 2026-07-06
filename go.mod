@@ -3,6 +3,7 @@ module github.com/appleboy/drone-telegram
 go 1.25.10
 
 require (
+	github.com/Mad-Pixels/goldmark-tgmd v0.0.10
 	github.com/appleboy/drone-template-lib v1.3.0
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/joho/godotenv v1.5.1
@@ -28,6 +29,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
+	github.com/yuin/goldmark v1.6.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
