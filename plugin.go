@@ -165,7 +165,8 @@ func convertMarkdownV2Fields(fields ...*string) {
 	md := tgmd.TGMD()
 	for _, f := range fields {
 		buf.Reset()
-		if err := md.Convert([]byte(*f), &buf); err == nil {
+		processed := strings.ReplaceAll(*f, "\n", "  \n")
+		if err := md.Convert([]byte(processed), &buf); err == nil {
 			*f = strings.TrimSpace(buf.String())
 		}
 	}
@@ -372,7 +373,8 @@ func (p *Plugin) Exec() (err error) {
 		for i, value := range message {
 			var buf bytes.Buffer
 			md := tgmd.TGMD()
-			if err := md.Convert([]byte(value), &buf); err != nil {
+			processed := strings.ReplaceAll(value, "\n", "  \n")
+			if err := md.Convert([]byte(processed), &buf); err != nil {
 				return fmt.Errorf("error converting markdown to MarkdownV2: %w", err)
 			}
 			message[i] = strings.TrimSpace(buf.String())

@@ -316,6 +316,43 @@ func TestConvertMarkdownV2Fields(t *testing.T) {
 	assert.Equal(t, `repo\_name`, repoName)
 }
 
+func TestConvertMarkdownV2FieldsNewlines(t *testing.T) {
+	provider := [][]string{
+		{"Line1\nLine2", "Line1\nLine2"},
+		{"Hello\n\nWorld", "Hello\n\nWorld"},
+		{"**bold**\n_italic_\n`code`", "***bold***\n_italic_\n`code`"},
+		{"\nLeading newline", "Leading newline"},
+		{"Trailing newline\n", "Trailing newline"},
+	}
+
+	for _, testCase := range provider {
+		input := testCase[0]
+		expected := testCase[1]
+		convertMarkdownV2Fields(&input)
+		assert.Equal(t, expected, input, "input: %q", testCase[0])
+	}
+}
+
+func TestConvertMarkdownV2OneNewlines(t *testing.T) {
+	provider := [][]string{
+		{"Hello\nWorld", "Hello\nWorld"},
+		{"Hello\n\nWorld", "Hello\n\nWorld"},
+		{"Line1\nLine2\nLine3", "Line1\nLine2\nLine3"},
+		{"**bold**\n\n_italic_\n`code`", "***bold***\n\n_italic_\n`code`"},
+	}
+
+	md := tgmd.TGMD()
+	var buf bytes.Buffer
+	for _, testCase := range provider {
+		buf.Reset()
+		processed := strings.ReplaceAll(testCase[0], "\n", "  \n")
+		if err := md.Convert([]byte(processed), &buf); err != nil {
+			t.Fatalf("failed to convert markdown: %v", err)
+		}
+		assert.Equal(t, testCase[1], strings.TrimSpace(buf.String()))
+	}
+}
+
 func TestParseTo(t *testing.T) {
 	input := []string{"0", "1:1@gmail.com", "2:2@gmail.com", "3:3@gmail.com", "4", "5"}
 
