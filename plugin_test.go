@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -295,6 +296,10 @@ func TestConvertMarkdownV2One(t *testing.T) {
 		{"*italic* text", `_italic_ text`},
 		{"`code` block", "`code` block"},
 		{"[link](url)", "[link](url)"},
+		{"text (with parens)", `text \(with parens\)`},
+		{"Changes from (luckynvic fork) to upstream", `Changes from \(luckynvic fork\) to upstream`},
+		{"Issue #123 is fixed", `Issue \#123 is fixed`},
+		{"PR #695 in 4s", `PR \#695 in 4s`},
 	}
 
 	md := tgmd.TGMD()
@@ -639,4 +644,217 @@ Commit msg:  {{uppercasefirst commit.message}}
 duration: {{duration build.started build.finished}}
 `, plugin)
 	assert.NoError(t, err)
+}
+
+func TestSuccessBlockTemplate(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   string
+		expected string
+	}{
+		{"success status", "success", "GOOD"},
+		{"failure status", "failure", "BAD"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			plugin := Plugin{
+				Build: Build{
+					Status: tc.status,
+				},
+			}
+
+			result, err := template.RenderTrim(
+				`{{#success build.status}}GOOD{{else}}BAD{{/success}}`,
+				plugin,
+			)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestComplexTemplate(t *testing.T) {
+	plugin := Plugin{
+		Commit: Commit{
+			Message: "fix: update default template",
+			Author:  "luckynvic",
+		},
+		Build: Build{
+			Number:   692,
+			Status:   "success",
+			Event:    "pull_request",
+			Link:     "https://github.com/example/repo/actions/runs/123",
+			Started:  1234567890,
+		},
+		Repo: Repo{
+			Namespace: "monitoring-pendapatan",
+			Name:      "master",
+		},
+	}
+
+	tmpl := `{{#success build.status}}
+✅ Build succeeded: {{build.number}}
+🧙 : {{commit.author}}
+🕐 : {{build.event}}
+📚 : {{repo.namespace}}:{{repo.name}}
+{{else}}
+🔥 {{commit.message}}
+🧙 : {{commit.author}}
+❗ Failed. Check {{build.link}} for more details.
+{{/success}}`
+
+	result, err := template.RenderTrim(tmpl, plugin)
+	assert.NoError(t, err)
+	t.Logf("Result:\n%s", result)
+}
+
+func TestMarkdownV2FieldsEscapedBeforeTemplateRender(t *testing.T) {
+	plugin := Plugin{
+		Commit: Commit{
+			Author:  "luckynvic",
+			Branch:  "bugfix/invoice-footer",
+			Message: "Changes from `bugfix/invoice-footer` (luckynvic fork) to upstream/master:",
+		},
+		Build: Build{
+			Number:  695,
+			Status:  "success",
+			Event:   "pull_request",
+			Link:    "https://github.com/example/repo/actions/runs/123",
+			Started: 1234567890,
+		},
+		Repo: Repo{
+			Namespace: "monitoring-pendapatan",
+			Name:      "master",
+		},
+		Config: Config{
+			Format: formatMarkdownV2,
+		},
+	}
+
+	tmpl := `✅ {{commit.message}}
+🧙 : {{commit.author}}
+🕐 : {{build.event}}
+📚 : {{repo.name}}:{{commit.branch}}`
+
+	result, err := template.RenderTrim(tmpl, plugin)
+	assert.NoError(t, err)
+
+	result = convertMarkdownV2String(result)
+
+	assert.Contains(t, result, `\(luckynvic fork\)`)
+	assert.NotContains(t, result, `(luckynvic fork)`)
+}
+
+func TestMarkdownV2CommitMessageWithMarkdownSyntax(t *testing.T) {
+	plugin := Plugin{
+		Commit: Commit{
+			Author:  "developer",
+			Branch:  "main",
+			Message: "feat: add new feature\n\nThis PR includes:\n- **feature1**\n- *feature2*\n- See [docs](https://example.com)",
+		},
+		Build: Build{
+			Number:  100,
+			Status:  "success",
+			Event:   "pull_request",
+			Link:    "https://github.com/example/repo/actions/runs/123",
+			Started: 1234567890,
+		},
+		Repo: Repo{
+			Namespace: "example",
+			Name:      "repo",
+		},
+		Config: Config{
+			Format: formatMarkdownV2,
+		},
+	}
+
+	tmpl := `{{commit.message}}`
+
+	result, err := template.RenderTrim(tmpl, plugin)
+	assert.NoError(t, err)
+
+	result = convertMarkdownV2String(result)
+
+	assert.Contains(t, result, `***feature1***`)
+	assert.Contains(t, result, `_feature2_`)
+	assert.Contains(t, result, `[docs](https://example.com)`)
+}
+
+func TestTemplatePlaceholderReplacement(t *testing.T) {
+	plugin := Plugin{
+		Commit: Commit{
+			Author:  "testuser",
+			Branch:  "feature-branch",
+			Message: "test commit message",
+		},
+		Build: Build{
+			Number:  123,
+			Status:  "success",
+			Event:   "push",
+			Link:    "https://github.com/test/repo/actions/runs/456",
+			Started: 1234567890,
+		},
+		Repo: Repo{
+			Namespace: "testorg",
+			Name:      "testrepo",
+		},
+	}
+
+	tmpl := `Author: {{commit.author}}
+Branch: {{commit.branch}}
+Message: {{commit.message}}
+Build: #{{build.number}}
+Status: {{build.status}}
+Event: {{build.event}}
+Repo: {{repo.namespace}}/{{repo.name}}`
+
+	result, err := template.RenderTrim(tmpl, plugin)
+	assert.NoError(t, err)
+
+	assert.Contains(t, result, "Author: testuser")
+	assert.Contains(t, result, "Branch: feature-branch")
+	assert.Contains(t, result, "Message: test commit message")
+	assert.Contains(t, result, "Build: #123")
+	assert.Contains(t, result, "Status: success")
+	assert.Contains(t, result, "Event: push")
+	assert.Contains(t, result, "Repo: testorg/testrepo")
+}
+
+func TestMarkdownV2TemplateWithHash(t *testing.T) {
+	plugin := Plugin{
+		Build: Build{
+			Number: 695,
+			Status: "success",
+		},
+		Config: Config{
+			Format: formatMarkdownV2,
+		},
+	}
+
+	tmpl := `🥇 : #{{build.number}} in 4s`
+
+	result, err := template.RenderTrim(tmpl, plugin)
+	assert.NoError(t, err)
+
+	result = convertMarkdownV2String(result)
+
+	assert.Contains(t, result, `\#695`)
+}
+
+func TestMarkdownV2AllReservedCharacters(t *testing.T) {
+	reservedChars := []string{"_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"}
+
+	for _, ch := range reservedChars {
+		t.Run("char_"+ch, func(t *testing.T) {
+			input := fmt.Sprintf("test %s test", ch)
+			result := convertMarkdownV2String(input)
+
+			if ch == "[" || ch == "]" || ch == "(" || ch == ")" {
+				assert.Contains(t, result, `\`+ch+``)
+			} else {
+				assert.Contains(t, result, `\`+ch+``)
+			}
+		})
+	}
 }

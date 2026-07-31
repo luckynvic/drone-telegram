@@ -172,6 +172,16 @@ func convertMarkdownV2Fields(fields ...*string) {
 	}
 }
 
+func convertMarkdownV2String(s string) string {
+	md := tgmd.TGMD()
+	var buf bytes.Buffer
+	processed := strings.ReplaceAll(s, "\n", "  \n")
+	if err := md.Convert([]byte(processed), &buf); err == nil {
+		return strings.TrimSpace(buf.String())
+	}
+	return s
+}
+
 func globList(keys []string) []string {
 	newKeys := make([]string, 0, len(keys))
 
@@ -358,9 +368,16 @@ func (p *Plugin) Exec() (err error) {
 
 	message = trimElement(message)
 
-	if p.Config.Format == formatMarkdown {
-		message = escapeMarkdown(message)
+	var renderedMessages []string
+	for _, value := range message {
+		txt, err := template.RenderTrim(value, p)
+		if err != nil {
+			return err
+		}
+		renderedMessages = append(renderedMessages, html.UnescapeString(txt))
+	}
 
+	if p.Config.Format == formatMarkdown {
 		escapeMarkdownFields(
 			&p.Commit.Message, &p.Commit.Branch, &p.Commit.Link,
 			&p.Commit.Author, &p.Commit.Email,
@@ -370,32 +387,9 @@ func (p *Plugin) Exec() (err error) {
 	}
 
 	if p.Config.Format == formatMarkdownV2 {
-		for i, value := range message {
-			var buf bytes.Buffer
-			md := tgmd.TGMD()
-			processed := strings.ReplaceAll(value, "\n", "  \n")
-			if err := md.Convert([]byte(processed), &buf); err != nil {
-				return fmt.Errorf("error converting markdown to MarkdownV2: %w", err)
-			}
-			message[i] = strings.TrimSpace(buf.String())
+		for i := range renderedMessages {
+			renderedMessages[i] = convertMarkdownV2String(renderedMessages[i])
 		}
-
-		convertMarkdownV2Fields(
-			&p.Commit.Message, &p.Commit.Branch, &p.Commit.Link,
-			&p.Commit.Author, &p.Commit.Email,
-			&p.Build.Tag, &p.Build.Link, &p.Build.PR,
-			&p.Repo.Namespace, &p.Repo.Name,
-		)
-	}
-
-	// pre-render message templates (identical for all users)
-	var renderedMessages []string
-	for _, value := range message {
-		txt, err := template.RenderTrim(value, p)
-		if err != nil {
-			return err
-		}
-		renderedMessages = append(renderedMessages, html.UnescapeString(txt))
 	}
 
 	// pre-parse locations and venues (identical for all users)
