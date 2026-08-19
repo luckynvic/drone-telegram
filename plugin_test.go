@@ -858,3 +858,68 @@ func TestMarkdownV2AllReservedCharacters(t *testing.T) {
 		})
 	}
 }
+
+func TestCommitMessageWithEmojisMarkdownV2(t *testing.T) {
+	commitMessage := "<!-- :bulb: TIP: Delete sections or comments that are not relevant to this PR -->\n\n" +
+		"## :memo: Description\n" +
+		"Implements manual payment functionality for invoices.\n\n" +
+		"## :link: Related Issues & Tickets\n" +
+		"- Fixes: None\n" +
+		"- Related Ticket: None\n\n" +
+		"## :hammer_and_wrench: Type of Change\n" +
+		"- [ ] :bug: Bug fix (non-breaking change which fixes an issue)\n" +
+		"- [x] :sparkles: New feature (non-breaking change which adds functionality)\n" +
+		"- [ ] :collision: Breaking change (fix or feature that would cause existing functionality to not work as expected)\n" +
+		"- [ ] :zap: Performance / Code refactoring (no functional changes)\n" +
+		"- [ ] :books: Documentation update\n\n" +
+		"## :test_tube: How to Test & Verify\n" +
+		"<!-- Step-by-step instructions for the reviewer to verify your changes. -->\n\n" +
+		"### 1. Prerequisites\n" +
+		"- [ ] PHP version checked ('php -v')\n" +
+		"- [ ] Composer dependencies installed ('composer install')\n" +
+		"- [ ] Database migrations applied ('php yii migrate')\n" +
+		"- [ ] Codeception configured (if applicable)\n\n" +
+		"### 2. Steps to Reproduce / Verify\n" +
+		"1. Run relevant functional/unit tests ('./vendor/bin/codecept run')\n" +
+		"2. Check affected module/controller behavior in local/UAT\n" +
+		"3. Verify database schema changes if any migration included\n\n" +
+		"### 3. Automated Tests Run\n" +
+		"- [ ] Unit tests\n" +
+		"- [ ] Functional / Acceptance tests (Codeception)\n" +
+		"- [ ] Database migration tested (if applicable)\n\n" +
+		"## :rocket: Pre-Merge Checklist\n" +
+		"- [ ] Code follows Yii2 conventions and project coding standards\n" +
+		"- [ ] I have performed a self-review of my own code\n" +
+		"- [ ] I have commented on my code, particularly in complex logic\n" +
+		"- [ ] I have made corresponding changes to the documentation\n" +
+		"- [ ] No new PHP warnings/errors introduced\n" +
+		"- [ ] Database migrations are backward-compatible (if applicable)\n" +
+		"- [ ] No hardcoded credentials or secrets introduced"
+
+	plugin := Plugin{
+		Commit: Commit{
+			Message: commitMessage,
+		},
+		Config: Config{
+			Format: formatMarkdownV2,
+		},
+	}
+
+	tmpl := "{{commit.message}}"
+
+	result, err := template.RenderTrim(tmpl, plugin)
+	assert.NoError(t, err)
+
+	result = convertMarkdownV2String(result)
+
+	assert.Contains(t, result, "💡")
+	assert.Contains(t, result, "📝")
+	assert.Contains(t, result, "🔗")
+	assert.Contains(t, result, "🔧")
+	assert.Contains(t, result, "✨")
+	assert.Contains(t, result, "💥")
+	assert.Contains(t, result, "⚡")
+	assert.Contains(t, result, "📚")
+	assert.Contains(t, result, "🧪")
+	assert.Contains(t, result, "🚀")
+}

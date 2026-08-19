@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -165,7 +166,7 @@ func convertMarkdownV2Fields(fields ...*string) {
 	md := tgmd.TGMD()
 	for _, f := range fields {
 		buf.Reset()
-		processed := strings.ReplaceAll(*f, "\n", "  \n")
+		processed := strings.ReplaceAll(replaceShortcodes(*f), "\n", "  \n")
 		if err := md.Convert([]byte(processed), &buf); err == nil {
 			*f = strings.TrimSpace(buf.String())
 		}
@@ -175,11 +176,35 @@ func convertMarkdownV2Fields(fields ...*string) {
 func convertMarkdownV2String(s string) string {
 	md := tgmd.TGMD()
 	var buf bytes.Buffer
-	processed := strings.ReplaceAll(s, "\n", "  \n")
+	processed := strings.ReplaceAll(replaceShortcodes(s), "\n", "  \n")
 	if err := md.Convert([]byte(processed), &buf); err == nil {
 		return strings.TrimSpace(buf.String())
 	}
 	return s
+}
+
+var shortcodeEmoji = map[string]string{
+	":bulb:":              "💡",
+	":memo:":              "📝",
+	":link:":              "🔗",
+	":hammer_and_wrench:": "🔧",
+	":sparkles:":          "✨",
+	":collision:":         "💥",
+	":zap:":               "⚡",
+	":books:":             "📚",
+	":test_tube:":         "🧪",
+	":rocket:":            "🚀",
+}
+
+var shortcodeRegex = regexp.MustCompile(`:[a-z0-9_+-]+:`)
+
+func replaceShortcodes(s string) string {
+	return shortcodeRegex.ReplaceAllStringFunc(s, func(shortcode string) string {
+		if emoji, ok := shortcodeEmoji[shortcode]; ok {
+			return emoji
+		}
+		return shortcode
+	})
 }
 
 func globList(keys []string) []string {
