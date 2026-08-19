@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
@@ -14,7 +14,7 @@ ARG TARGETVARIANT
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GOARM=${TARGETVARIANT} \
   go build -a -trimpath -ldflags '-s -w' -o /out/drone-telegram .
 
-FROM alpine:3.23
+FROM alpine:3.24
 
 LABEL maintainer="Bo-Yi Wu <appleboy.tw@gmail.com>" \
   org.label-schema.name="Telegram Plugin" \
