@@ -167,6 +167,7 @@ func convertMarkdownV2Fields(fields ...*string) {
 	for _, f := range fields {
 		buf.Reset()
 		processed := strings.ReplaceAll(replaceShortcodes(*f), "\n", "  \n")
+		processed = preprocessCheckboxes(processed)
 		if err := md.Convert([]byte(processed), &buf); err == nil {
 			*f = strings.TrimSpace(buf.String())
 		}
@@ -177,6 +178,7 @@ func convertMarkdownV2String(s string) string {
 	md := tgmd.TGMD()
 	var buf bytes.Buffer
 	processed := strings.ReplaceAll(replaceShortcodes(s), "\n", "  \n")
+	processed = preprocessCheckboxes(processed)
 	if err := md.Convert([]byte(processed), &buf); err == nil {
 		return strings.TrimSpace(buf.String())
 	}
@@ -184,19 +186,60 @@ func convertMarkdownV2String(s string) string {
 }
 
 var shortcodeEmoji = map[string]string{
-	":bulb:":              "💡",
-	":memo:":              "📝",
-	":link:":              "🔗",
-	":hammer_and_wrench:": "🔧",
-	":sparkles:":          "✨",
-	":collision:":         "💥",
-	":zap:":               "⚡",
-	":books:":             "📚",
-	":test_tube:":         "🧪",
-	":rocket:":            "🚀",
+	":bug:":                   "🐛",
+	":fire:":                  "🔥",
+	":warning:":               "⚠️",
+	":checkered_flag:":        "🏁",
+	":package:":               "📦",
+	":lock:":                  "🔒",
+	":key:":                   "🔑",
+	":recycle:":               "♻️",
+	":green_heart:":           "💚",
+	":broken_heart:":          "💔",
+	":star:":                  "⭐",
+	":star2:":                 "🌟",
+	":pushpin:":               "📌",
+	":pencil2:":               "✏️",
+	":wrench:":                "🔧",
+	":hammer_and_wrench:":     "🛠️",
+	":clipboard:":             "📋",
+	":bookmark:":              "🔖",
+	":white_check_mark:":      "✅",
+	":x:":                     "❌",
+	":rotating_light:":        "🚨",
+	":speech_balloon:":        "💬",
+	":thought_balloon:":       "💭",
+	":eyes:":                  "👀",
+	":wave:":                  "👋",
+	":handshake:":             "🤝",
+	":bulb:":                  "💡",
+	":memo:":                  "📝",
+	":link:":                  "🔗",
+	":sparkles:":              "✨",
+	":collision:":             "💥",
+	":zap:":                   "⚡",
+	":books:":                 "📚",
+	":test_tube:":             "🧪",
+	":rocket:":                "🚀",
 }
 
 var shortcodeRegex = regexp.MustCompile(`:[a-z0-9_+-]+:`)
+
+func preprocessCheckboxes(s string) string {
+	replacements := []struct {
+		old string
+		new string
+	}{
+		{"- [ ]", "- ☐"}, {"- [x]", "- ✅"}, {"- [X]", "- ✅"},
+		{"• [ ]", "• ☐"}, {"• [x]", "• ✅"}, {"• [X]", "• ✅"},
+		{"* [ ]", "* ☐"}, {"* [x]", "* ✅"}, {"* [X]", "• ✅"},
+		{"+ [ ]", "+ ☐"}, {"+ [x]", "+ ✅"}, {"+ [X]", "+ ✅"},
+	}
+	for _, r := range replacements {
+		s = strings.ReplaceAll(s, r.old, r.new)
+	}
+	return s
+}
 
 func replaceShortcodes(s string) string {
 	return shortcodeRegex.ReplaceAllStringFunc(s, func(shortcode string) string {
