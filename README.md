@@ -12,7 +12,7 @@ information and a listing of the available options please take a look at [the do
 
 ## Feature
 
-* [x] Send with Text Message. (`markdown` or `html` format)
+* [x] Send with Text Message. (`markdown`, `markdownv2` or `html` format)
 * [x] Send with New Photo.
 * [x] Send with New Document.
 * [x] Send with New Audio.

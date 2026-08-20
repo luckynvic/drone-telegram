@@ -128,7 +128,7 @@ Example configuration with video message:
 +       - tests/video2.mp4
 ```
 
-Example configuration with message format (`Markdown` or `HTML`), default as `Markdown`:
+Example configuration with message format (`Markdown`, `MarkdownV2` or `HTML`), default as `Markdown`:
 
 ```diff
   - name: send telegram notification
@@ -300,7 +300,7 @@ venue
 : local file path
 
 format
-: `markdown` or `html` format
+: `markdown`, `markdownv2` or `html` format
 
 ## Template Reference
 
