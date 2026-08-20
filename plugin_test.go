@@ -923,6 +923,6 @@ func TestCommitMessageWithEmojisMarkdownV2(t *testing.T) {
 	assert.Contains(t, result, "📚")
 	assert.Contains(t, result, "🧪")
 	assert.Contains(t, result, "🚀")
-	assert.Contains(t, result, "☐")
+	assert.Contains(t, result, "⬜")
 	assert.Contains(t, result, "✅")
 }

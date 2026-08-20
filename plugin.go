@@ -177,8 +177,8 @@ func convertMarkdownV2Fields(fields ...*string) {
 func convertMarkdownV2String(s string) string {
 	md := tgmd.TGMD()
 	var buf bytes.Buffer
-	processed := strings.ReplaceAll(replaceShortcodes(s), "\n", "  \n")
-	processed = preprocessCheckboxes(processed)
+	processed := preprocessCheckboxes(replaceShortcodes(s))
+	processed = strings.ReplaceAll(processed, "\n", "  \n")
 	if err := md.Convert([]byte(processed), &buf); err == nil {
 		return strings.TrimSpace(buf.String())
 	}
