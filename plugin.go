@@ -166,8 +166,7 @@ func convertMarkdownV2Fields(fields ...*string) {
 	md := tgmd.TGMD()
 	for _, f := range fields {
 		buf.Reset()
-		processed := strings.ReplaceAll(replaceShortcodes(*f), "\n", "  \n")
-		processed = preprocessCheckboxes(processed)
+		processed := replaceNewlinesForMarkdownV2(preprocessCheckboxes(replaceShortcodes(*f)))
 		if err := md.Convert([]byte(processed), &buf); err == nil {
 			*f = strings.TrimSpace(buf.String())
 		}
@@ -177,12 +176,38 @@ func convertMarkdownV2Fields(fields ...*string) {
 func convertMarkdownV2String(s string) string {
 	md := tgmd.TGMD()
 	var buf bytes.Buffer
-	processed := preprocessCheckboxes(replaceShortcodes(s))
-	processed = strings.ReplaceAll(processed, "\n", "  \n")
+	processed := replaceNewlinesForMarkdownV2(preprocessCheckboxes(replaceShortcodes(s)))
 	if err := md.Convert([]byte(processed), &buf); err == nil {
 		return strings.TrimSpace(buf.String())
 	}
 	return s
+}
+
+var listItemRegex = regexp.MustCompile(`^\s*[-*+]\s|^\s*\d+[\.\)]\s`)
+
+func isContinuationLine(line string) bool {
+	return strings.HasPrefix(line, "  ") && !listItemRegex.MatchString(line)
+}
+
+func replaceNewlinesForMarkdownV2(s string) string {
+	lines := strings.Split(s, "\n")
+	var result strings.Builder
+	for i, line := range lines {
+		result.WriteString(line)
+		if i < len(lines)-1 {
+			nextLine := lines[i+1]
+			if listItemRegex.MatchString(line) {
+				if listItemRegex.MatchString(nextLine) || isContinuationLine(nextLine) {
+					result.WriteString("\n")
+				} else {
+					result.WriteString("\n\n")
+				}
+			} else {
+				result.WriteString("  \n")
+			}
+		}
+	}
+	return result.String()
 }
 
 var shortcodeEmoji = map[string]string{

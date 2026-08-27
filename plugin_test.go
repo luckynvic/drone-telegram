@@ -925,4 +925,137 @@ func TestCommitMessageWithEmojisMarkdownV2(t *testing.T) {
 	assert.Contains(t, result, "🚀")
 	assert.Contains(t, result, "⬜")
 	assert.Contains(t, result, "✅")
+
+	// Verify no extra newlines between list item bullets and text
+	// (the "loose list" bug where paragraph renderer adds newlines inside list items)
+	assert.NotContains(t, result, "  • \n✅",
+		"list item bullets should be on same line as text, not separated by newline")
+}
+
+func TestPreMergeChecklistNoExtraNewlines(t *testing.T) {
+	rawMessage := "✅ Success\n" +
+		" <!-- :bulb: TIP: Delete sections or comments that are not relevant to this PR -->\n" +
+		"\n" +
+		"## :memo: Description\n" +
+		"Implements manual payment functionality for invoices.\n" +
+		"\n" +
+		"## :link: Related Issues & Tickets\n" +
+		"- Fixes: None\n" +
+		"- Related Ticket: None\n" +
+		"\n" +
+		"## :hammer_and_wrench: Type of Change\n" +
+		"- [ ] :bug: Bug fix (non-breaking change which fixes an issue)\n" +
+		"- [x] :sparkles: New feature (non-breaking change which adds functionality)\n" +
+		"- [ ] :collision: Breaking change (fix or feature that would cause existing functionality to not work as expected)\n" +
+		"- [ ] :zap: Performance / Code refactoring (no functional changes)\n" +
+		"- [ ] :books: Documentation update\n" +
+		"\n" +
+		"## :test_tube: How to Test & Verify\n" +
+		"<!-- Step-by-step instructions for the reviewer to verify your changes. -->\n" +
+		"\n" +
+		"### 1. Prerequisites\n" +
+		"- [x] PHP version checked (`php -v`)\n" +
+		"- [x] Composer dependencies installed (`composer install`)\n" +
+		"- [x] Database migrations applied (`php yii migrate`)\n" +
+		"- [x] Codeception configured (if applicable)\n" +
+		"\n" +
+		"### 2. Steps to Reproduce / Verify\n" +
+		"1. Run relevant functional/unit tests (`./vendor/bin/codecept run`)\n" +
+		"2. Check affected module/controller behavior in local/UAT\n" +
+		"3. Verify database schema changes if any migration included\n" +
+		"\n" +
+		"### 3. Automated Tests Run\n" +
+		"- [x] Unit tests\n" +
+		"- [x] Functional / Acceptance tests (Codeception)\n" +
+		"- [x] Database migration tested (if applicable)\n" +
+		"\n" +
+		"## :rocket: Pre-Merge Checklist\n" +
+		"- [x] Code follows YiYi2 conventions and project coding standards\n" +
+		"- [x] I have performed a self-review of my own code\n" +
+		"- [x] I have commented on my code, particularly in complex logic\n" +
+		"- [x] I have made corresponding changes to the documentation\n" +
+		"- [x] No new PHP warnings/errors introduced\n" +
+		"- [x] Database migrations are backward-compatible (if applicable)\n" +
+		"- [x] No hardcoded credentials or secrets introduced\n" +
+		" 🧙 : luckynvic\n" +
+		" 🕐 : pull_request\n" +
+		" 📚 : monitoring-pendapatan:uat\n" +
+		" 🥇 : #716 in 10s\n" +
+		"\n" +
+		" 👍 Good job"
+
+	result := convertMarkdownV2String(rawMessage)
+
+	// The bug was that list items had extra newlines between bullet and text:
+	//   •
+	// ✅ text
+	// instead of:
+	//   • ✅ text
+	assert.NotContains(t, result, "  • \n✅",
+		"list item bullets should be on same line as text, not separated by newline")
+
+	// Verify all Pre-Merge Checklist items have text on same line as bullet
+	assert.Contains(t, result, "  • ✅ Code follows YiYi2")
+	assert.Contains(t, result, "  • ✅ I have performed a self\\-review")
+	assert.Contains(t, result, "  • ✅ I have commented on my code")
+	assert.Contains(t, result, "  • ✅ I have made corresponding changes")
+	assert.Contains(t, result, "  • ✅ No new PHP warnings/errors")
+	assert.Contains(t, result, "  • ✅ Database migrations are backward\\-compatible")
+	assert.Contains(t, result, "  • ✅ No hardcoded credentials or secrets")
+
+	// Verify footer is on separate line (not concatenated with last list item)
+	assert.NotContains(t, result, "introduced🧙")
+	assert.Contains(t, result, "introduced\n")
+}
+
+func TestPreMergeChecklistMinimal(t *testing.T) {
+	rawMessage := "## :rocket: Pre-Merge Checklist\n" +
+		"- [x] Code follows YiYi2 conventions and project coding standards\n" +
+		"- [x] I have performed a self-review of my own code\n" +
+		"- [x] No hardcoded credentials or secrets introduced\n" +
+		" 🧙 : luckynvic\n" +
+		" 🕐 : pull_request\n" +
+		" 🥇 : #716 in 10s"
+
+	result := convertMarkdownV2String(rawMessage)
+
+	assert.NotContains(t, result, "  • \n✅",
+		"list item bullets should be on same line as text")
+	assert.Contains(t, result, "  • ✅ Code follows YiYi2")
+	assert.Contains(t, result, "  • ✅ I have performed a self\\-review")
+	assert.Contains(t, result, "  • ✅ No hardcoded credentials")
+
+	// Verify footer is on separate line (not concatenated with last list item)
+	assert.NotContains(t, result, "introduced🧙")
+	assert.Contains(t, result, "introduced\n")
+}
+
+func TestOrderedListItemNoExtraNewlines(t *testing.T) {
+	rawMessage := "## Step 2: Steps\n" +
+		"1. Run relevant functional/unit tests\n" +
+		"2. Check affected module/controller behavior\n" +
+		"3. Verify database schema changes if any migration included\n" +
+		" 🧙 : luckynvic"
+
+	result := convertMarkdownV2String(rawMessage)
+
+	assert.NotContains(t, result, "  • \nRun",
+		"ordered list item text should not be separated from marker by newline")
+	assert.Contains(t, result, "  • Run relevant functional/unit tests")
+	assert.Contains(t, result, "  • Check affected module/controller")
+	assert.Contains(t, result, "  • Verify database schema")
+}
+
+func TestParagraphWithNewlinesPreserved(t *testing.T) {
+	rawMessage := "## Description\n" +
+		"Implements manual payment functionality.\n" +
+		"Additional details here.\n" +
+		"More details.\n" +
+		" 🧙 : test"
+
+	result := convertMarkdownV2String(rawMessage)
+
+	assert.Contains(t, result, "Implements manual payment functionality\\.")
+	assert.Contains(t, result, "Additional details here\\.")
+	assert.Contains(t, result, "More details\\.")
 }
