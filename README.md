@@ -77,7 +77,7 @@ docker run --rm \
   -e PLUGIN_VIDEO=tests/video.mp4 \
   -e PLUGIN_DEBUG=true \
   -e PLUGIN_ONLY_MATCH_EMAIL=false \
-  -e PLUGIN_FORMAT=markdown \
+  -e PLUGIN_FORMAT=MarkdownV2 \
   -e DRONE_REPO_OWNER=appleboy \
   -e DRONE_REPO_NAME=go-hello \
   -e DRONE_COMMIT_SHA=e5e82b5eb3737205c25955dcc3dcacc839b7be52 \

@@ -136,7 +136,7 @@ Example configuration with message format (`Markdown`, `MarkdownV2` or `HTML`), 
     settings:
       token: xxxxxxxxxx
       to: telegram_user_id
-+     format: Markdown
++     format: MarkdownV2
 ```
 
 Example configuration with a custom message template:
@@ -300,7 +300,7 @@ venue
 : local file path
 
 format
-: `markdown`, `markdownv2` or `html` format
+: `Markdown`, `MarkdownV2` or `HTML` format
 
 ## Template Reference
 
